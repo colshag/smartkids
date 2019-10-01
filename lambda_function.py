@@ -68,12 +68,11 @@ def __pass_session_attributes(session):
     to keep the session attributes active"""
     d = {}
     if session.get('attributes', {}):
-        pass
-        # current_id = session['attributes']['id']
-        # d['crew_morale'] = session['attributes']['crew_morale'] + scenarios[current_id]['CREW_MORALE'] # update morale
-        # d['ship_strength'] = session['attributes']['ship_strength'] + scenarios[current_id]['SHIP_STRENGTH'] # update ship strength
-        # d['intel'] = session['attributes']['intel'] + scenarios[current_id]['INTEL'] # update intel
-        # d['id'] = session['attributes']['id']
+        current_id = session['attributes']['id']
+        d['category'] = session['attributes']['category']
+        d['completed'] = session['attributes']['completed']
+        d['correct'] = session['attributes']['correct']
+        d['id'] = current_id
     
     print('pass_session_attributes====>')
     print(d)
@@ -87,11 +86,52 @@ def get_fact_response(intent, session, category):
     session_attributes = __pass_session_attributes(session)
     speech_output = "I'm sorry there has been an error, please contact neurojump forums"
     
-    # if session.get('attributes', {}):
-    if category != "":
+    if session.get('attributes', {}):
         speech_output = random.choice(myFacts[category]) + ", please choose from these categories: Culture, Animals, Geography, and Space"
         
     card_title = "Your %s Fact" % category
+    reprompt_text = speech_output
+    should_end_session = False
+
+    return build_response(session_attributes, build_speechlet_response(
+        card_title, speech_output, reprompt_text, should_end_session))
+
+def get_true_response(intent, session):
+    """ A player says True"""
+    print("get_true_response===>")
+    print(session)
+    session_attributes = __pass_session_attributes(session)
+    speech_output = "I'm sorry there has been an error, please contact neurojump forums"
+    
+    if session.get('attributes', {}):
+        # determine where to go based on yes being said
+        current_id = session_attributes['id']
+        new_id = scenarios[current_id]['YES']
+        speech_output = scenarios[new_id]['DIALOG'] # new dialog
+        session_attributes['id'] = new_id # send player to next dialog choice
+        
+    card_title = "Yes"
+    reprompt_text = speech_output
+    should_end_session = False
+
+    return build_response(session_attributes, build_speechlet_response(
+        card_title, speech_output, reprompt_text, should_end_session))
+    
+def get_false_response(intent, session):
+    """ A player says False"""
+    print("get_false_response===>")
+    print(session)
+    session_attributes = __pass_session_attributes(session)
+    speech_output = "I'm sorry there has been an error, please contact neurojump forums"
+    
+    if session.get('attributes', {}):
+        # determine where to go based on yes being said
+        current_id = session_attributes['id']
+        new_id = scenarios[current_id]['NO']
+        speech_output = scenarios[new_id]['DIALOG'] # new dialog
+        session_attributes['id'] = new_id # send player to next dialog choice
+        
+    card_title = "No"
     reprompt_text = speech_output
     should_end_session = False
 
@@ -102,10 +142,14 @@ def get_welcome_response():
     """ If we wanted to initialize the session to have some attributes we could
     add those here
     """
-    session_attributes = {}
+    session_attributes = {'id':1,
+                          'category':'CULTURE',
+                          'completed':[],
+                          'correct':0
+                          }
 
     card_title = "Welcome"
-    speech_output = "Welcome to our learning game called. Did You Know. We hope you enjoy some random facts from four categories. Please say: Culture, Animals, Geography, or Space, to learn some interesting facts!"
+    speech_output = "Welcome to Smart Kids, Please say: Culture, Animals, Geography, or Space, to learn some interesting facts!"
     reprompt_text = speech_output
     should_end_session = False
     
@@ -118,7 +162,7 @@ def get_help_response():
     session_attributes = {}
 
     card_title = "Help"
-    speech_output = "No Problem. I would love to share some facts with you, please choose from these categories: Culture, Animals, Geography, and Space"
+    speech_output = "No Problem. Please choose from these categories: Culture, Animals, Geography, and Space"
     reprompt_text = speech_output
     should_end_session = False
     
@@ -127,7 +171,7 @@ def get_help_response():
 
 def handle_session_end_request():
     card_title = "Session Ended"
-    speech_output = "Thank you for trying did you know, we hope you learned something new! " \
+    speech_output = "Thank you for trying smart kids, we hope you learned something new! " \
                     "Have a great day! "
                     
     # Setting this to true ends the session and exits the skill.
@@ -171,6 +215,10 @@ def on_intent(intent_request, session):
         return get_fact_response(intent, session, "GEOGRAPHY")
     elif intent_name == "spaceFact":
         return get_fact_response(intent, session, "SPACE")
+    elif intent_name == "true":
+        return get_true_response(intent, session)
+    elif intent_name == "false":
+        return get_false_response(intent, session)
     elif intent_name == "AMAZON.HelpIntent":
         return get_help_response()
     elif intent_name == "AMAZON.CancelIntent" or intent_name == "AMAZON.StopIntent":
