@@ -11,7 +11,7 @@ with open('facts.csv', newline='') as csvfile:
     for row in reader:
         try:
             if row['CATEGORY'] in myFacts.keys():
-                row['ID'] = len(myFacts[row['CATEGORY']]) + 1
+                row['ID'] = len(myFacts[row['CATEGORY']])
                 myFacts[row['CATEGORY']].append(row)
         except:
             pass

@@ -78,27 +78,43 @@ def __pass_session_attributes(session):
     print(d)
     return d
 
-def get_fact_response(intent, session, category):
+def get_question(intent, session, category):
     """ Give player a fact question based on category given
     """
-    print("get_fact_response(%s)===>" % category)
+    print("get_question(%s)===>" % category)
     print(session)
     session_attributes = __pass_session_attributes(session)
     speech_output = "I'm sorry there has been an error, please contact neurojump forums"
     
     if session.get('attributes', {}):
-        if session_attributes["ID"] == 0:
-            item = random.choice(myFacts[category]) # this is a new question
-            speech_output = "From the %s category:" % category
-            speech_output = speech_output + ", Here is your True or False Question: " + item["QUESTION"]
-            session_attributes["category"] = category
-            session_attributes["ID"] = item["ID"]             
+        if session_attributes["ID"] == -1:
+            if len(session_attributes['donelist'][category]) >= len(myFacts[category]):
+                # all questions in category have been asked
+                speech_output = "Great work! You have asked for all the questions in the %s category, please choose another category." % category
+            else:
+                # category has questions left from this selected category
+                selectedID = -2
+                count = 0
+                while selectedID == -2:
+                    count += 1
+                    item = random.choice(myFacts[category])
+                    if item["ID"] not in session_attributes['donelist'][category]:
+                        selectedID = item["ID"]
+                        speech_output = "From the %s category: " % category
+                        speech_output = speech_output + "Here is your True or False Question: " + item["QUESTION"]
+                        print("TRY ITEMID = %d" % item["ID"])
+                        session_attributes["category"] = category
+                        session_attributes["ID"] = selectedID
+                    if count > 100:
+                        speech_output = "Sorry there was an error selecting a question, please try again!"
+                        break
         else:
             category = session_attributes['category']
             categoryList = myFacts[category]
             item = categoryList[session_attributes['ID']]
-            speech_output = "From the %s category:" % session_attributes['category']
-            speech_output = speech_output + ", Here is your True or False Question: " + item['QUESTION']
+            speech_output = "From the %s category: " % session_attributes['category']
+            print("STORE ITEMID = %d" % item["ID"])
+            speech_output = speech_output + "Here is a repeat of your True or False Question: " + item['QUESTION']
             
     card_title = "Your %s Question" % category
     reprompt_text = speech_output
@@ -107,15 +123,15 @@ def get_fact_response(intent, session, category):
     return build_response(session_attributes, build_speechlet_response(
         card_title, speech_output, reprompt_text, should_end_session))
 
-def get_true_response(intent, session):
-    """ A player says True"""
-    print("get_true_response===>")
+def get_response(intent, session, response):
+    """ A player says response = TRUE or FALSE"""
+    print("get_response===>%s" % response)
     print(session)
     session_attributes = __pass_session_attributes(session)
     speech_output = "I'm sorry there has been an error, please contact neurojump forums"
     
     if session.get('attributes', {}):
-        if session_attributes['ID'] == 0:
+        if session_attributes['ID'] == -1:
             speech_output = "Please chose a category from: Culture, Animals, Geography, and Space. " 
         else:
             completed = session_attributes['completed'] + 1
@@ -123,7 +139,7 @@ def get_true_response(intent, session):
             correct = session_attributes['correct']
             item = myFacts[category][session_attributes['ID']]
             
-            if item["TRUE OR FALSE"] == "TRUE":
+            if item["TRUE OR FALSE"] == response:
                 correct += 1
             
             if completed == 0:
@@ -131,52 +147,15 @@ def get_true_response(intent, session):
             else:
                 score = (float(correct) / float(completed)) * 100
                 
-            speech_output = item["RESPONSE TRUE"] + ". Your score is %d percent, Please chose another category from: Culture, Animals, Geography, and Space. " % score
+            speech_output = item["RESPONSE %s" % response] + ". Your score is %d percent, Please chose another category from: Culture, Animals, Geography, and Space. " % score
             session_attributes['correct'] = correct
             session_attributes['completed'] = completed
-            session_attributes['ID'] = 0
             donelist = session_attributes['donelist']
-            donelist.append("%s-%s" % (category, session_attributes['ID']))
+            donelist[category].append(session_attributes['ID'])
+            session_attributes['donelist'] = donelist
+            session_attributes['ID'] = -1
         
-    card_title = "True"
-    reprompt_text = speech_output
-    should_end_session = False
-
-    return build_response(session_attributes, build_speechlet_response(
-        card_title, speech_output, reprompt_text, should_end_session))
-    
-def get_false_response(intent, session):
-    """ A player says False"""
-    print("get_false_response===>")
-    print(session)
-    session_attributes = __pass_session_attributes(session)
-    speech_output = "I'm sorry there has been an error, please contact neurojump forums"
-    
-    if session.get('attributes', {}):
-        if session_attributes['ID'] == 0:
-            speech_output = "Please chose a category from: Culture, Animals, Geography, and Space. " 
-        else:
-            completed = session_attributes['completed'] + 1
-            category = session_attributes['category']
-            correct = session_attributes['correct']
-            item = myFacts[category][session_attributes['ID']]
-            
-            if item["TRUE OR FALSE"] == "FALSE":
-                correct += 1
-            
-            if completed == 0:
-                score = 0
-            else:
-                score = (float(correct) / float(completed)) * 100
-                
-            speech_output = item["RESPONSE FALSE"] + ". Your score is %d percent, Please chose another category from: Culture, Animals, Geography, and Space. " % score
-            session_attributes['correct'] = correct
-            session_attributes['completed'] = completed
-            session_attributes['ID'] = 0
-            donelist = session_attributes['donelist']
-            donelist.append("%s-%s" % (category, session_attributes['ID']))
-        
-    card_title = "False"
+    card_title = response
     reprompt_text = speech_output
     should_end_session = False
 
@@ -187,15 +166,15 @@ def get_welcome_response():
     """ If we wanted to initialize the session to have some attributes we could
     add those here
     """
-    session_attributes = {'ID':0,
+    session_attributes = {'ID':-1,
                           'category':'CULTURE',
                           'completed':0,
                           'correct':0,
-                          'donelist':[]
+                          'donelist':{'CULTURE':[],'ANIMALS':[],'GEOGRAPHY':[],'SPACE':[]}
                           }
 
     card_title = "Welcome"
-    speech_output = "Welcome to Smart Kids, Please say: Culture, Animals, Geography, or Space to start your learning game!"
+    speech_output = "Welcome to Smart Kids, Please choose from these categories: Culture, Animals, Geography, or Space."
     reprompt_text = speech_output
     should_end_session = False
     
@@ -254,17 +233,17 @@ def on_intent(intent_request, session):
 
     # Dispatch to your skill's intent handlers
     if intent_name == "cultureFact":
-        return get_fact_response(intent, session, "CULTURE")
+        return get_question(intent, session, "CULTURE")
     elif intent_name == "animalFact":
-        return get_fact_response(intent, session, "ANIMALS")
+        return get_question(intent, session, "ANIMALS")
     elif intent_name == "geographyFact":
-        return get_fact_response(intent, session, "GEOGRAPHY")
+        return get_question(intent, session, "GEOGRAPHY")
     elif intent_name == "spaceFact":
-        return get_fact_response(intent, session, "SPACE")
+        return get_question(intent, session, "SPACE")
     elif intent_name == "true":
-        return get_true_response(intent, session)
+        return get_response(intent, session, "TRUE")
     elif intent_name == "false":
-        return get_false_response(intent, session)
+        return get_response(intent, session, "FALSE")
     elif intent_name == "AMAZON.HelpIntent":
         return get_help_response(intent, session)
     elif intent_name == "AMAZON.CancelIntent" or intent_name == "AMAZON.StopIntent":
