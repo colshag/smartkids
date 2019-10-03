@@ -114,7 +114,7 @@ def get_question(intent, session, category):
             item = categoryList[session_attributes['ID']]
             speech_output = "From the %s category: " % session_attributes['category']
             print("STORE ITEMID = %d" % item["ID"])
-            speech_output = speech_output + "Here is a repeat of your True or False Question: " + item['QUESTION']
+            speech_output = speech_output + "Here is a your True or False Question: " + item['QUESTION']
             
     card_title = "Your %s Question" % category
     reprompt_text = speech_output
@@ -132,7 +132,7 @@ def get_response(intent, session, response):
     
     if session.get('attributes', {}):
         if session_attributes['ID'] == -1:
-            speech_output = "Please chose a category from: Culture, Animals, Geography, and Space. " 
+            speech_output = "Please choose a category from: Culture, Animals, Geography, and Space. " 
         else:
             completed = session_attributes['completed'] + 1
             category = session_attributes['category']
@@ -147,7 +147,7 @@ def get_response(intent, session, response):
             else:
                 score = (float(correct) / float(completed)) * 100
                 
-            speech_output = item["RESPONSE %s" % response] + ". Your score is %d percent, Please chose another category from: Culture, Animals, Geography, and Space. " % score
+            speech_output = item["RESPONSE %s" % response] + ". Your score is %d percent from %d questions asked, Please chose another category from: Culture, Animals, Geography, and Space. " % (score, completed)
             session_attributes['correct'] = correct
             session_attributes['completed'] = completed
             donelist = session_attributes['donelist']
@@ -174,7 +174,7 @@ def get_welcome_response():
                           }
 
     card_title = "Welcome"
-    speech_output = "Welcome to Smart Kids, Please choose from these categories: Culture, Animals, Geography, or Space."
+    speech_output = "Welcome to Smart Kids where we ask you 10 True or False questions on your journey of learning. Please choose your first category from Culture, Animals, Geography, or Space."
     reprompt_text = speech_output
     should_end_session = False
     
@@ -205,6 +205,23 @@ def handle_session_end_request():
     return build_response({}, build_speechlet_response(
         card_title, speech_output, None, should_end_session))
 
+def end_game(intent, session):
+    card_title = "Game Complete"
+                    
+    # Setting this to true ends the session and exits the skill.
+    should_end_session = True
+    session_attributes = __pass_session_attributes(session)
+    speech_output = "I'm sorry there has been an error, please contact neurojump forums"
+    
+    if session.get('attributes', {}):
+        correct = session_attributes['correct']
+        completed = session_attributes['completed']
+        score = (float(correct) / float(completed)) * 100
+        speech_output = "Great Job! You finished 10 questions from smart kids, nice work! Your final score was %d percent. See you again soon for more learning with Neuro Jump Games!" % score
+    
+    return build_response({}, build_speechlet_response(
+        card_title, speech_output, None, should_end_session))
+
 # --------------- Events ------------------
 
 def on_session_started(session_started_request, session):
@@ -229,7 +246,12 @@ def on_intent(intent_request, session):
 
     intent = intent_request['intent']
     intent_name = intent_request['intent']['name']
+    session_attributes = __pass_session_attributes(session)
 
+    # check status of game
+    if session.get('attributes', {}):
+        if session_attributes['completed'] == 10:
+            return end_game(intent, session)
 
     # Dispatch to your skill's intent handlers
     if intent_name == "cultureFact":
