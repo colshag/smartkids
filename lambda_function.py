@@ -147,7 +147,7 @@ def get_response(intent, session, response):
             else:
                 score = (float(correct) / float(completed)) * 100
                 
-            speech_output = item["RESPONSE %s" % response] + ". Your score is %d percent from %d questions asked, Please chose another category from: Culture, Animals, Geography, and Space. " % (score, completed)
+            speech_output = item["RESPONSE %s" % response] + ". Your score is %d percent from %d questions asked, Please chose from: Culture, Animals, Geography, and Space. " % (score, completed)
             session_attributes['correct'] = correct
             session_attributes['completed'] = completed
             donelist = session_attributes['donelist']
@@ -174,7 +174,7 @@ def get_welcome_response():
                           }
 
     card_title = "Welcome"
-    speech_output = "Welcome to Smart Kids where we ask you 10 True or False questions on your journey of learning. Please choose your first category from Culture, Animals, Geography, or Space."
+    speech_output = "Welcome to Smart Kids, where we ask you 10 True or False questions, on your journey of learning. Please choose your first category, from Culture, Animals, Geography, or Space."
     reprompt_text = speech_output
     should_end_session = False
     
@@ -187,7 +187,7 @@ def get_help_response(intent, session):
     session_attributes = __pass_session_attributes(session)
 
     card_title = "Help"
-    speech_output = "No Problem. Please choose from these categories: Culture, Animals, Geography, and Space"
+    speech_output = "Please choose from these categories: Culture, Animals, Geography, and Space"
     reprompt_text = speech_output
     should_end_session = False
     
