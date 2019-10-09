@@ -18,8 +18,8 @@ def build_speechlet_response(title, output, reprompt_text, should_end_session):
         },
         "card": {
             "type": "Simple",
-            "title": "SessionSpeechlet - " + title,
-            "content": "SessionSpeechlet - " + __remove_ssml_speech(output)
+            "title": title,
+            "content": __remove_ssml_speech(output)
         },
         "reprompt": {
             "outputSpeech": {
